@@ -1,0 +1,21 @@
+
+# Dependencies
+node_modules/
+*/node_modules/
+server/node_modules/
+client/node_modules/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
+
+# Environment
+.env
+.env.local
+
+# Build
+/dist
+/build
