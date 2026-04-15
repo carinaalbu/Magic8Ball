@@ -1,0 +1,42 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    color: #f8fafc;
+    background-color: #020617;
+  }
+
+  @keyframes shake {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+    10% { transform: translate3d(-7px, -4px, 0) rotate(-5deg) scale(1.01); }
+    20% { transform: translate3d(7px, -3px, 0) rotate(5deg) scale(0.995); }
+    30% { transform: translate3d(-6px, 4px, 0) rotate(-4.5deg) scale(1.008); }
+    40% { transform: translate3d(6px, -4px, 0) rotate(4deg) scale(0.996); }
+    50% { transform: translate3d(-5px, 3px, 0) rotate(-3.5deg) scale(1.006); }
+    60% { transform: translate3d(4px, -3px, 0) rotate(3deg) scale(0.998); }
+    70% { transform: translate3d(-3px, 2px, 0) rotate(-2.5deg) scale(1.003); }
+    80% { transform: translate3d(2px, -2px, 0) rotate(2deg) scale(0.999); }
+    90% { transform: translate3d(-1px, 1px, 0) rotate(-1deg) scale(1.001); }
+    100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  }
+  .animate-shake {
+    animation: shake 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
