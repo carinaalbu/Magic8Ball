@@ -3,9 +3,46 @@ const express = require('express');
 const cors = require('cors');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const fs = require('fs');
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const { MAGIC_8BALL_ANSWERS } = require('./src/answers');
+
+function loadEnvFromFile() {
+  const envPath = path.join(__dirname, '.env');
+  if (!fs.existsSync(envPath)) {
+    return;
+  }
+
+  const content = fs.readFileSync(envPath, 'utf8');
+  content.split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) {
+      return;
+    }
+
+    const firstEquals = trimmed.indexOf('=');
+    if (firstEquals <= 0) {
+      return;
+    }
+
+    const key = trimmed.slice(0, firstEquals).trim();
+    let value = trimmed.slice(firstEquals + 1).trim();
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  });
+}
+
+loadEnvFromFile();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +55,7 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const SMTP_FROM = process.env.SMTP_FROM || '"Magic 8-Ball" <no-reply@magic8ball.app>';
 
 let db;
+let transporterPromise = null;
 
 app.use(cors({ origin: CLIENT_ORIGIN }));
 app.use(express.json({ limit: '10kb' }));
@@ -44,28 +82,37 @@ function validateEmail(email) {
   return emailRegex.test(email.trim());
 }
 
-function createTransporter() {
+async function getTransporter() {
   if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
     return null;
   }
 
-  return nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465,
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS
-    }
-  });
+  if (!transporterPromise) {
+    transporterPromise = (async () => {
+      const transporter = nodemailer.createTransport({
+        host: SMTP_HOST,
+        port: SMTP_PORT,
+        secure: SMTP_PORT === 465,
+        auth: {
+          user: SMTP_USER,
+          pass: SMTP_PASS
+        }
+      });
+
+      await transporter.verify();
+      return transporter;
+    })();
+  }
+
+  try {
+    return await transporterPromise;
+  } catch (error) {
+    transporterPromise = null;
+    throw error;
+  }
 }
 
-async function initializeDatabase() {
-  db = await open({
-    filename: DB_PATH,
-    driver: sqlite3.Database
-  });
-
+async function ensureSchema() {
   await db.exec(`
     CREATE TABLE IF NOT EXISTS submissions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,6 +122,21 @@ async function initializeDatabase() {
       created_at TEXT NOT NULL
     );
   `);
+
+  const columns = await db.all('PRAGMA table_info(submissions)');
+  const hasEmailColumn = columns.some((column) => column.name === 'email');
+  if (!hasEmailColumn) {
+    await db.exec('ALTER TABLE submissions ADD COLUMN email TEXT');
+  }
+}
+
+async function initializeDatabase() {
+  db = await open({
+    filename: DB_PATH,
+    driver: sqlite3.Database
+  });
+
+  await ensureSchema();
 }
 
 app.get('/api/health', (_req, res) => {
@@ -107,6 +169,47 @@ app.post('/api/answer', async (req, res) => {
   }
 });
 
+app.get('/api/history/recent', async (_req, res) => {
+  try {
+    const history = await db.all(
+      'SELECT id, question, answer, created_at FROM submissions ORDER BY created_at DESC LIMIT 3'
+    );
+    return res.status(200).json({ history });
+  } catch (error) {
+    console.error('Error fetching recent history:', error);
+    return res.status(500).json({ error: 'Failed to load history.' });
+  }
+});
+
+app.get('/api/history/all', async (_req, res) => {
+  try {
+    const history = await db.all(
+      'SELECT id, question, answer, created_at FROM submissions ORDER BY created_at DESC'
+    );
+    return res.status(200).json({ history });
+  } catch (error) {
+    console.error('Error fetching full history:', error);
+    return res.status(500).json({ error: 'Failed to load history.' });
+  }
+});
+
+app.delete('/api/history/:entryId', async (req, res) => {
+  try {
+    const entryId = Number(req.params.entryId);
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+      return res.status(400).json({ error: 'Invalid entry id.' });
+    }
+
+    await db.run('DELETE FROM submissions WHERE id = ?', [entryId]);
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error deleting history entry:', error);
+    return res.status(500).json({ error: 'Failed to delete entry.' });
+  }
+});
+
+
+
 app.post('/api/submit', async (req, res) => {
   try {
     const { entryId, email } = req.body || {};
@@ -129,7 +232,8 @@ app.post('/api/submit', async (req, res) => {
       return res.status(404).json({ error: 'Answer entry not found.' });
     }
 
-    const transporter = createTransporter();
+    const normalizedEmail = email.trim().toLowerCase();
+    const transporter = await getTransporter();
     if (!transporter) {
       return res.status(503).json({
         error:
@@ -139,13 +243,13 @@ app.post('/api/submit', async (req, res) => {
 
     await transporter.sendMail({
       from: SMTP_FROM,
-      to: email.trim(),
+      to: normalizedEmail,
       subject: 'Your Magic 8-Ball Answer',
       text: `Your question: ${entry.question}\nMagic 8-Ball answer: ${entry.answer}`
     });
 
     await db.run('UPDATE submissions SET email = ? WHERE id = ?', [
-      email.trim(),
+      normalizedEmail,
       parsedEntryId
     ]);
 
