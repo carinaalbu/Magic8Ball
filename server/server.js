@@ -168,6 +168,32 @@ app.post('/api/answer', async (req, res) => {
   }
 });
 
+app.get('/api/history/recent', async (_req, res) => {
+  try {
+    const history = await db.all(
+      'SELECT id, question, answer, created_at FROM submissions ORDER BY created_at DESC LIMIT 3'
+    );
+    return res.status(200).json({ history });
+  } catch (error) {
+    console.error('Error fetching recent history:', error);
+    return res.status(500).json({ error: 'Failed to load history.' });
+  }
+});
+
+app.get('/api/history/all', async (_req, res) => {
+  try {
+    const history = await db.all(
+      'SELECT id, question, answer, created_at FROM submissions ORDER BY created_at DESC'
+    );
+    return res.status(200).json({ history });
+  } catch (error) {
+    console.error('Error fetching full history:', error);
+    return res.status(500).json({ error: 'Failed to load history.' });
+  }
+});
+
+
+
 app.post('/api/submit', async (req, res) => {
   try {
     const { entryId, email } = req.body || {};

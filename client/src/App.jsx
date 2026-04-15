@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import glossyBall from './assets/glossy-ball-png-26229.svg'
+
+
 
 export default function App() {
   const [question, setQuestion] = useState('')
@@ -11,6 +13,35 @@ export default function App() {
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [recentHistory, setRecentHistory] = useState([])
+  const [fullHistory, setFullHistory] = useState([])
+  const [showFullHistory, setShowFullHistory] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [expandedEntryId, setExpandedEntryId] = useState(null)
+
+  const fetchRecentHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/history/recent')
+      const data = await res.json()
+      if (res.ok) setRecentHistory(data.history)
+    } catch (err) { console.error('Failed to load recent history') }
+  }, [])
+
+  const fetchFullHistory = useCallback(async () => {
+    setLoadingHistory(true)
+    try {
+      const res = await fetch('/api/history/all')
+      const data = await res.json()
+      if (res.ok) setFullHistory(data.history)
+    } catch (err) { console.error('Failed to load full history') }
+    setLoadingHistory(false)
+  }, [])
+
+
+
+  useEffect(() => {
+    fetchRecentHistory()
+  }, [fetchRecentHistory, answer])
 
   const canAsk = question.trim().length > 0 && !isLoadingAnswer && !isShaking
   const canSendEmail = !!answer && !!entryId && !isSendingEmail
@@ -188,6 +219,73 @@ export default function App() {
               </p>
             )}
           </div>
+
+          {recentHistory.length > 0 && (
+            <div className="mt-8">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-white font-semibold">Recent Answers</h3>
+                <button
+                  onClick={() => { setShowFullHistory(true); fetchFullHistory(); }}
+                  className="text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
+                >
+                  View full history
+                </button>
+              </div>
+              <div className="space-y-3">
+                {recentHistory.map((entry) => (
+                  <div
+                    key={entry.id}
+                    onClick={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
+                    className="bg-white/5 rounded-xl border border-white/10 p-4 cursor-pointer hover:bg-white/8 transition-all"
+                  >
+                    <p className="text-slate-200 font-medium flex justify-between items-center">
+                      {entry.question}
+                      <span className={`text-indigo-300 transition-transform duration-200 ${expandedEntryId === entry.id ? 'rotate-180' : ''}`}>
+                        ▼
+                      </span>
+                    </p>
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedEntryId === entry.id ? 'max-h-20 mt-3' : 'max-h-0'}`}>
+                      <p className="text-indigo-300">{entry.answer}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {showFullHistory && (
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+              <div className="bg-slate-900 rounded-2xl border border-white/15 max-w-lg w-full max-h-[80vh] overflow-auto p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-white font-bold text-xl">Full Answer History</h2>
+                  <button
+                    onClick={() => setShowFullHistory(false)}
+                    className="text-slate-400 hover:text-white text-lg"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {loadingHistory ? (
+                  <p className="text-slate-400 text-center">Loading history...</p>
+                ) : fullHistory.length === 0 ? (
+                  <p className="text-slate-400 text-center">No history recorded yet.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {fullHistory.map((entry) => (
+                      <div key={entry.id} className="bg-white/5 rounded-xl p-4">
+                        <p className="text-slate-200">{entry.question}</p>
+                        <p className="text-indigo-300 mt-1">{entry.answer}</p>
+                        <p className="text-slate-500 text-xs mt-1">
+                          {new Date(entry.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
