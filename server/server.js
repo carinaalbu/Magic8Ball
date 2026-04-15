@@ -192,6 +192,21 @@ app.get('/api/history/all', async (_req, res) => {
   }
 });
 
+app.delete('/api/history/:entryId', async (req, res) => {
+  try {
+    const entryId = Number(req.params.entryId);
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+      return res.status(400).json({ error: 'Invalid entry id.' });
+    }
+
+    await db.run('DELETE FROM submissions WHERE id = ?', [entryId]);
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error('Error deleting history entry:', error);
+    return res.status(500).json({ error: 'Failed to delete entry.' });
+  }
+});
+
 
 
 app.post('/api/submit', async (req, res) => {
