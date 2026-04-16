@@ -11,6 +11,7 @@ export default function App() {
   const [isSendingEmail, setIsSendingEmail] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
+  const [emailStatusMessage, setEmailStatusMessage] = useState('')
   const [recentHistory, setRecentHistory] = useState([])
   const [fullHistory, setFullHistory] = useState([])
   const [showFullHistory, setShowFullHistory] = useState(false)
@@ -60,6 +61,7 @@ export default function App() {
 
     setErrorMessage('')
     setStatusMessage('')
+    setEmailStatusMessage('')
     setAnswer(null)
     setEntryId(null)
     setEmail('')
@@ -109,7 +111,7 @@ export default function App() {
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.error || 'Unable to send email.')
 
-      setStatusMessage('Email sent successfully.')
+      setEmailStatusMessage('Email sent successfully.')
     } catch (error) {
       setErrorMessage(error.message || 'Unable to send email right now.')
     } finally {
@@ -118,9 +120,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex items-center justify-center p-4 sm:p-6 md:p-10 lg:p-16 font-[Inter]">
-      <div className="w-full max-w-xl">
-        <div className="backdrop-blur-2xl bg-white/5 rounded-3xl border border-white/15 p-6 sm:p-10 shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950 flex items-center justify-center px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-12 font-[Inter]">
+      <div className="w-full max-w-[1000px] h-full">
+        <div className="h-full backdrop-blur-2xl bg-white/5 rounded-3xl border border-white/15 p-5 sm:p-6 shadow-[0_30px_80px_rgba(0,0,0,0.6)]">
           <h1 className="text-3xl sm:text-4xl font-bold text-center mb-3 bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 bg-clip-text text-transparent">
             Magic Crystal Ball
           </h1>
@@ -128,97 +130,117 @@ export default function App() {
             Ask a yes/no question and get a random answer.
           </p>
 
-          <div className="space-y-4 mb-8">
-            <label htmlFor="question" className="block text-sm font-medium text-slate-100">Your question</label>
-            <input
-              id="question"
-              type="text"
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAsk()}
-              placeholder="Should I take the new job?"
-              className="w-full px-5 py-4 rounded-2xl bg-white/10 border border-white/25 text-white text-base placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-all"
-            />
-            <button
-              onClick={handleAsk}
-              disabled={!canAsk}
-              className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-lg rounded-full hover:from-indigo-500 hover:to-purple-500 hover:scale-[1.01] disabled:opacity-50 transition-all duration-200 shadow-lg shadow-indigo-900/40"
-            >
-              {isLoadingAnswer || isShaking ? 'Deciding...' : 'Get a Decision'}
-            </button>
-          </div>
+          <div className="grid gap-6 xl:gap-8 grid-cols-1 lg:grid-cols-[1fr_minmax(260px,320px)] h-full">
+            <div className="space-y-6">
+              <div className="space-y-4 bg-white/5 rounded-3xl border border-white/10 p-6 shadow-inner shadow-black/10">
+                <label htmlFor="question" className="block text-sm font-medium text-slate-100">Your question</label>
+                <input
+                  id="question"
+                  type="text"
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAsk()}
+                  placeholder="Should I take the new job?"
+                  className="w-full px-5 py-4 rounded-2xl bg-white/10 border border-white/25 text-white text-base placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-all"
+                />
+                <button
+                  onClick={handleAsk}
+                  disabled={!canAsk}
+                  className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold text-lg rounded-full hover:from-indigo-500 hover:to-purple-500 hover:scale-[1.01] disabled:opacity-50 transition-all duration-200 shadow-lg shadow-indigo-900/40"
+                >
+                  {isLoadingAnswer || isShaking ? 'Deciding...' : 'Get a Decision'}
+                </button>
+              </div>
 
-          <div className="flex justify-center mb-10">
-            <div className="relative flex flex-col items-center">
-              <div className="absolute inset-0 w-full max-w-[384px] aspect-square rounded-full bg-indigo-500/15 blur-3xl"></div>
-              <div className={`relative w-full max-w-[384px] aspect-square flex items-center justify-center ${isShaking ? 'animate-shake' : ''}`}>
-                <img src={glossyBall} alt="Magic decision ball" className="w-full h-full object-contain drop-shadow-[0_20px_36px_rgba(0,0,0,0.5)] saturate-90 brightness-95" />
-                <div className="absolute w-56 h-56 flex items-center justify-center">
-                  <div className="absolute inset-0 rounded-full bg-indigo-900/30 blur-xl"></div>
-                  <div className="relative z-10 w-40 text-white text-center px-2 font-semibold text-base leading-relaxed">
-                    {isShaking ? 'Thinking...' : answer || 'Ask your question to get a decision'}
+              <div className="flex justify-center">
+                <div className="relative flex flex-col items-center w-full max-w-[320px] sm:max-w-[280px]">
+                  <div className="absolute inset-0 w-full aspect-square rounded-full bg-indigo-500/15 blur-3xl"></div>
+                  <div className={`relative w-full aspect-square flex items-center justify-center ${isShaking ? 'animate-shake' : ''}`}>
+                    <img src={glossyBall} alt="Magic decision ball" className="w-full h-full object-contain drop-shadow-[0_20px_36px_rgba(0,0,0,0.5)] saturate-90 brightness-95" />
+                    <div className="absolute w-56 h-56 flex items-center justify-center">
+                      <div className="absolute inset-0 rounded-full bg-indigo-900/30 blur-xl"></div>
+                      <div className="relative z-10 w-40 text-white text-center px-2 font-semibold text-base leading-relaxed">
+                        {isShaking ? 'Thinking...' : answer || 'Ask your question to get a decision'}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          {answer && (
-            <div className="bg-white/5 rounded-2xl border border-white/10 p-5 space-y-4">
-              <label htmlFor="email" className="block text-sm font-medium text-slate-100">Email this result (optional)</label>
-              <input
-                id="email"
-                type="email"
-                placeholder="name@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              />
-              <button
-                onClick={handleSendEmail}
-                disabled={!canSendEmail}
-                className="w-full py-3 bg-white/10 text-slate-100 font-medium rounded-full hover:bg-white/20 disabled:opacity-50 transition-all"
-              >
-                {isSendingEmail ? 'Sending...' : 'Send Email'}
-              </button>
+            <div className="space-y-6 overflow-hidden">
+              <div className="bg-white/5 rounded-3xl border border-white/10 p-6 shadow-inner shadow-black/10 overflow-hidden">
+                <h2 className="text-white text-lg font-semibold mb-3">Email the decision</h2>
+                {answer ? (
+                  <div className="space-y-4">
+                    <p className="text-slate-300">Send the latest decision to your inbox.</p>
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder="name@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/20 text-white placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition-all"
+                    />
+                    <button
+                      onClick={handleSendEmail}
+                      disabled={!canSendEmail}
+                      className="w-full py-3 bg-white/10 text-slate-100 font-medium rounded-full hover:bg-white/20 disabled:opacity-50 transition-all"
+                    >
+                      {isSendingEmail ? 'Sending...' : 'Send Email'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-slate-400">Ask a question first to enable email sharing.</p>
+                )}
+              </div>
+              {emailStatusMessage && (
+                <div className="mt-3">
+                  <p className="text-sm text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2">
+                    {emailStatusMessage}
+                  </p>
+                </div>
+              )}
+
+              <div className="bg-white/5 rounded-3xl border border-white/10 p-6 shadow-inner shadow-black/10 overflow-y-auto max-h-[32rem]">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-white font-semibold">Recent Answers</h3>
+                  <button
+                    onClick={() => { setShowFullHistory(true); fetchFullHistory(); }}
+                    className="text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
+                  >
+                    View full history
+                  </button>
+                </div>
+                {recentHistory.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentHistory.map((entry) => (
+                      <div
+                        key={entry.id}
+                        onClick={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
+                        className="w-full bg-white/5 rounded-2xl border border-white/10 p-4 cursor-pointer hover:bg-white/8 transition-all"
+                      >
+                        <p className="text-slate-200 font-medium flex justify-between items-center">
+                          <span className="flex-1 text-left">{entry.question}</span>
+                          <span className={`text-indigo-300 transition-transform duration-200 ${expandedEntryId === entry.id ? 'rotate-180' : ''}`}>▼</span>
+                        </p>
+                        <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedEntryId === entry.id ? 'max-h-20 mt-3' : 'max-h-0'}`}>
+                          <p className="text-indigo-300">{entry.answer}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-400">No recent answers yet. Ask anything to build your history.</p>
+                )}
+              </div>
             </div>
-          )}
+          </div>
 
           <div className="mt-5 min-h-6">
             {errorMessage && <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">{errorMessage}</p>}
             {!errorMessage && statusMessage && <p className="text-sm text-emerald-200 bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-2">{statusMessage}</p>}
           </div>
-
-          {recentHistory.length > 0 && (
-            <div className="mt-8">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-white font-semibold">Recent Answers</h3>
-                <button
-                  onClick={() => { setShowFullHistory(true); fetchFullHistory(); }}
-                  className="text-sm text-indigo-300 hover:text-indigo-200 transition-colors"
-                >
-                  View full history
-                </button>
-              </div>
-              <div className="space-y-3">
-                {recentHistory.map((entry) => (
-                  <div
-                    key={entry.id}
-                    onClick={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
-                    className="bg-white/5 rounded-xl border border-white/10 p-4 cursor-pointer hover:bg-white/8 transition-all"
-                  >
-                    <p className="text-slate-200 font-medium flex justify-between items-center">
-                      {entry.question}
-                      <span className={`text-indigo-300 transition-transform duration-200 ${expandedEntryId === entry.id ? 'rotate-180' : ''}`}>▼</span>
-                    </p>
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out ${expandedEntryId === entry.id ? 'max-h-20 mt-3' : 'max-h-0'}`}>
-                      <p className="text-indigo-300">{entry.answer}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Fixed Modal Logic */}
           {showFullHistory && (
